@@ -1,0 +1,39 @@
+/* Tailwind imports are handled via CDN in HTML, this is for custom overrides */
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #1f2937;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+}
+
+.fade-enter-active, .fade-leave-active {
+    transition: opacity 0.5s;
+}
+.fade-enter-from, .fade-leave-to {
+    opacity: 0;
+}
+
+[v-cloak] {
+    display: none;
+}
+
+/* Markdown-like styling for bot responses */
+.bot-response ul {
+    list-style-type: disc;
+    margin-left: 1.5rem;
+    margin-top: 0.5rem;
+}
+.bot-response li {
+    margin-bottom: 0.25rem;
+}
+.bot-response strong {
+    color: #60a5fa; /* blue-400 */
+}

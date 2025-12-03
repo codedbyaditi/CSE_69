@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intelligent Substation Maintenance Bot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles/main.css">
+</head>
+<body class="bg-gray-900 text-white font-sans h-screen overflow-hidden">
+    <div id="app" v-cloak class="h-full flex flex-col">
+        <!-- Header -->
+        <header class="bg-gray-800 shadow-lg p-4 border-b border-gray-700 flex-none">
+            <div class="container mx-auto flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-robot text-blue-400 text-3xl"></i>
+                    <div>
+                        <h1 class="text-xl font-bold tracking-wider">Intelligent Chatbot</h1>
+                        <p class="text-xs text-gray-400">For Substation Asset Maintenance</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="text-right hidden md:block">
+                        <div class="text-sm font-bold text-gray-200">Asset ID: {{ status.id }}</div>
+                        <div class="text-xs text-gray-400">Next Maint: {{ status.next_maintenance }}</div>
+                    </div>
+                    <div :class="{'bg-green-500': status.status === 'Operational', 'bg-red-500': status.status === 'Warning'}" class="w-3 h-3 rounded-full animate-pulse"></div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content - Split View -->
+        <main class="flex-grow flex overflow-hidden">
+            
+            <!-- Left Panel: Asset Dashboard (40%) -->
+            <div class="w-full md:w-5/12 lg:w-1/3 bg-gray-800 border-r border-gray-700 flex flex-col overflow-y-auto custom-scrollbar p-4">
+                <h2 class="text-lg font-bold mb-4 text-gray-300 border-b border-gray-700 pb-2">Real-time Asset Health</h2>
+                
+                <!-- Status Cards -->
+                <div class="space-y-4">
+                    <!-- Voltage -->
+                    <div class="bg-gray-700 rounded-lg p-4 border-l-4" :class="status.voltage > 240 || status.voltage < 210 ? 'border-red-500' : 'border-blue-500'">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400 text-sm">Voltage</span>
+                            <i class="fas fa-bolt text-blue-400"></i>
+                        </div>
+                        <div class="text-2xl font-bold mt-1">{{ status.voltage }} V</div>
+                        <div class="w-full bg-gray-600 rounded-full h-1.5 mt-2">
+                            <div class="bg-blue-500 h-1.5 rounded-full" :style="{ width: (status.voltage / 300 * 100) + '%' }"></div>
+                        </div>
+                    </div>
+
+                    <!-- Current -->
+                    <div class="bg-gray-700 rounded-lg p-4 border-l-4" :class="status.current > 100 ? 'border-red-500' : 'border-yellow-500'">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400 text-sm">Current Load</span>
+                            <i class="fas fa-wave-square text-yellow-400"></i>
+                        </div>
+                        <div class="text-2xl font-bold mt-1">{{ status.current }} A</div>
+                        <div class="w-full bg-gray-600 rounded-full h-1.5 mt-2">
+                            <div class="bg-yellow-500 h-1.5 rounded-full" :style="{ width: (status.current / 150 * 100) + '%' }"></div>
+                        </div>
+                    </div>
+
+                    <!-- Temperature -->
+                    <div class="bg-gray-700 rounded-lg p-4 border-l-4" :class="status.temperature > 75 ? 'border-red-500' : 'border-green-500'">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400 text-sm">Core Temp</span>
+                            <i class="fas fa-thermometer-half text-red-400"></i>
+                        </div>
+                        <div class="text-2xl font-bold mt-1">{{ status.temperature }} °C</div>
+                        <div class="w-full bg-gray-600 rounded-full h-1.5 mt-2">
+                            <div class="bg-red-500 h-1.5 rounded-full" :style="{ width: (status.temperature / 120 * 100) + '%' }"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Diagnostics -->
+                <div class="mt-6 bg-gray-900 rounded-lg p-4 border border-gray-600">
+                    <h3 class="text-sm font-bold text-purple-400 mb-2"><i class="fas fa-brain mr-2"></i>AI Diagnostic</h3>
+                    <div class="text-center py-2">
+                        <div class="text-xl font-bold" :class="getPredictionColor(status.prediction)">
+                            {{ status.prediction || 'Analyzing...' }}
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1">Anomaly Risk Score: {{ (status.anomaly_score * 100).toFixed(1) }}%</div>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="mt-auto pt-6">
+                    <button @click="toggleMonitoring" class="w-full py-2 rounded-lg font-bold text-sm transition duration-200 mb-3" :class="monitoring ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'">
+                        {{ monitoring ? 'Stop Monitoring' : 'Start Monitoring' }}
+                    </button>
+                    <button @click="resetSystem" :disabled="loading" class="w-full py-2 bg-gray-600 hover:bg-gray-500 rounded-lg font-bold text-sm transition duration-200 disabled:opacity-50">
+                        <i class="fas fa-redo-alt mr-2" :class="{'fa-spin': loading}"></i> Reset System
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Panel: Intelligent Chatbot (60%) -->
+            <div class="flex-grow flex flex-col bg-gray-900 relative">
+                <!-- Chat Area -->
+                <div class="flex-grow p-6 overflow-y-auto custom-scrollbar space-y-4" ref="chatContainer">
+                    <div v-if="chatMessages.length === 0" class="flex flex-col items-center justify-center h-full text-gray-500 opacity-50">
+                        <i class="fas fa-robot text-6xl mb-4"></i>
+                        <p>Ask me about maintenance schedules, fault protocols, or asset health.</p>
+                    </div>
+
+                    <div v-for="(msg, index) in chatMessages" :key="index" class="flex" :class="msg.isUser ? 'justify-end' : 'justify-start'">
+                        <div class="max-w-[80%] flex items-start gap-3" :class="msg.isUser ? 'flex-row-reverse' : 'flex-row'">
+                            <!-- Avatar -->
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" 
+                                 :class="msg.isUser ? 'bg-blue-600' : 'bg-purple-600'">
+                                <i class="fas" :class="msg.isUser ? 'fa-user' : 'fa-robot'"></i>
+                            </div>
+                            
+                            <!-- Bubble -->
+                            <div class="p-3 rounded-2xl text-sm shadow-md bot-response relative group" 
+                                 :class="msg.isUser ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-gray-700 text-gray-200 rounded-tl-none'">
+                                <p v-html="formatMessage(msg.text)"></p>
+                                <div class="flex justify-between items-center mt-1">
+                                    <span v-if="!msg.isUser && msg.accuracy !== null && msg.accuracy > 0" 
+                                          class="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-green-400 border border-gray-600"
+                                          title="Confidence Score">
+                                        <i class="fas fa-check-circle mr-1"></i>{{ msg.accuracy }}%
+                                    </span>
+                                    <span class="text-[10px] opacity-50 ml-auto">{{ msg.time }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div v-if="isTyping" class="flex justify-start">
+                        <div class="bg-gray-700 p-3 rounded-2xl rounded-tl-none text-gray-400 text-xs italic flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></span>
+                            <span class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></span>
+                            <span class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Area -->
+                <div class="p-4 bg-gray-800 border-t border-gray-700">
+                    <form @submit.prevent="sendMessage" class="relative">
+                        <input v-model="chatInput" type="text" placeholder="Type your maintenance query here..." 
+                               class="w-full bg-gray-900 border border-gray-600 rounded-full pl-5 pr-12 py-3 text-sm focus:outline-none focus:border-blue-500 text-white shadow-inner transition-colors">
+                        <button type="submit" class="absolute right-2 top-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-9 h-9 flex items-center justify-center transition duration-200 shadow-lg">
+                            <i class="fas fa-paper-plane text-xs"></i>
+                        </button>
+                    </form>
+                    <div class="flex gap-2 mt-3 overflow-x-auto pb-1 custom-scrollbar">
+                        <button @click="quickQuery('Maintenance for Power Transformer')" class="whitespace-nowrap px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-full text-xs text-gray-300 border border-gray-600 transition">Power Transformer Maint.</button>
+                        <button @click="quickQuery('Tools for Circuit Breaker')" class="whitespace-nowrap px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-full text-xs text-gray-300 border border-gray-600 transition">Circuit Breaker Tools</button>
+                        <button @click="quickQuery('Safety for GIS')" class="whitespace-nowrap px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-full text-xs text-gray-300 border border-gray-600 transition">GIS Safety</button>
+                        <button @click="quickQuery('Symptoms of Battery Bank failure')" class="whitespace-nowrap px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-full text-xs text-gray-300 border border-gray-600 transition">Battery Failure</button>
+                        <button @click="openKbModal" class="whitespace-nowrap px-3 py-1 bg-purple-600 hover:bg-purple-700 rounded-full text-xs text-white border border-purple-500 transition font-bold"><i class="fas fa-book mr-1"></i> Knowledge Base</button>
+                        <button @click="clearChat" class="whitespace-nowrap px-3 py-1 bg-red-600 hover:bg-red-700 rounded-full text-xs text-white border border-red-500 transition font-bold"><i class="fas fa-trash-alt mr-1"></i> Clear</button>
+                        <button @click="exportChat" class="whitespace-nowrap px-3 py-1 bg-green-600 hover:bg-green-700 rounded-full text-xs text-white border border-green-500 transition font-bold"><i class="fas fa-download mr-1"></i> Export</button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Knowledge Base Modal -->
+        <div v-if="showKbModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+            <div class="bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col border border-gray-700">
+                <div class="p-4 border-b border-gray-700 flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-white"><i class="fas fa-database text-purple-400 mr-2"></i>Select Equipment</h3>
+                    <button @click="showKbModal = false" class="text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="p-4 overflow-y-auto custom-scrollbar grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <button v-for="item in equipmentList" :key="item" @click="selectEquipment(item)" 
+                            class="text-left px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm text-gray-200 transition flex items-center group">
+                        <i class="fas fa-cog text-gray-500 group-hover:text-purple-400 mr-3 transition-colors"></i>
+                        {{ item }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
